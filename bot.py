@@ -226,16 +226,6 @@ def webhook():
     return "!", 200
 
 
-# Настройка вебхука при старте
-@app.route("/")
-def set_webhook():
-    if not BOT_TOKEN:
-        return "BOT_TOKEN is not set", 500
-    webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
-    bot_app.bot.set_webhook(url=webhook_url)
-    return "Webhook set", 200
-
-
 # Запуск Flask-приложения
 if __name__ == "__main__":
     # Инициализация бота
