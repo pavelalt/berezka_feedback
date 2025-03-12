@@ -1,3 +1,7 @@
+if __name__ == "__main__":
+    bot_app.bot.set_webhook(url=f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}")
+
+
 import os
 from flask import Flask, request
 import logging
