@@ -239,6 +239,31 @@ def set_webhook():
 
 # Запуск Flask-приложения
 if __name__ == "__main__":
-    # Добавляем обработчики в бота
-    conv_handler = ConversationHandler(
-        entry_points
+# Добавляем обработчики в бота
+conv_handler = ConversationHandler(
+    entry_points=[CommandHandler("start", start)],
+    states={
+        FEEDBACK_CONTENT: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, feedback_content)
+        ],
+        PHOTO_ATTACHMENT: [
+            MessageHandler(filters.PHOTO, handle_photo),
+            MessageHandler(filters.Regex("^Завершить отправку фото$"), done_photos),
+            CommandHandler("done", done_photos),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, photo_attachment),
+        ],
+        VISIT_DETAILS: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, visit_details)
+        ],
+        CONTACT_INFO: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, contact_info)
+        ],
+    },
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+
+bot_app.add_handler(conv_handler)
+
+# Запускаем Flask
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
