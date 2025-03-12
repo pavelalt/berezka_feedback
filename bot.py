@@ -16,6 +16,11 @@ from telegram.ext import (
     CallbackContext,
 )
 from dotenv import load_dotenv  # Для загрузки переменных из .env
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import smtplib
 
 # Загружаем переменные окружения из .env (для локального тестирования)
 load_dotenv()
@@ -237,8 +242,6 @@ def set_webhook():
     return "Webhook set", 200
 
 
-# Запуск Flask-приложения
-if __name__ == "__main__":
 # Добавляем обработчики в бота
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler("start", start)],
@@ -264,6 +267,7 @@ conv_handler = ConversationHandler(
 
 bot_app.add_handler(conv_handler)
 
-# Запускаем Flask
+
+# Запуск Flask-приложения
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
