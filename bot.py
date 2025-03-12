@@ -226,6 +226,12 @@ def webhook():
     return "!", 200
 
 
+# Маршрут для проверки работоспособности
+@app.route("/", methods=["GET", "HEAD"])
+def health_check():
+    return "OK", 200
+
+
 # Запуск Flask-приложения
 if __name__ == "__main__":
     # Инициализация бота
