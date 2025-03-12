@@ -17,6 +17,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import smtplib
+import asyncio  # Для работы с асинхронными функциями
 
 # Загружаем переменные окружения из .env (для локального тестирования)
 load_dotenv()
@@ -264,9 +265,14 @@ if __name__ == "__main__":
     )
     bot_app.add_handler(conv_handler)
 
-    # Настройка вебхука
-    webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
-    bot_app.bot.set_webhook(url=webhook_url)
+    # Асинхронная настройка вебхука
+    async def setup_webhook():
+        webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
+        await bot_app.bot.set_webhook(url=webhook_url)
+        logger.info("Webhook successfully set.")
+
+    # Запускаем настройку вебхука
+    asyncio.run(setup_webhook())
 
     # Запускаем Flask
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
