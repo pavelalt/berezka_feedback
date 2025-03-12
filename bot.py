@@ -1,7 +1,3 @@
-if __name__ == "__main__":
-    bot_app.bot.set_webhook(url=f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}")
-
-
 import os
 from flask import Flask, request
 import logging
@@ -47,9 +43,6 @@ if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
 
 # Создаем Flask-приложение
 app = Flask(__name__)
-
-# Инициализация бота
-bot_app = Application.builder().token(BOT_TOKEN).build()
 
 
 # Обработчик /start
@@ -237,37 +230,43 @@ def webhook():
 def set_webhook():
     if not BOT_TOKEN:
         return "BOT_TOKEN is not set", 500
-    webhook_url = f"https://your-app-name.onrender.com/{BOT_TOKEN}"
+    webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
     bot_app.bot.set_webhook(url=webhook_url)
     return "Webhook set", 200
 
 
-# Добавляем обработчики в бота
-conv_handler = ConversationHandler(
-    entry_points=[CommandHandler("start", start)],
-    states={
-        FEEDBACK_CONTENT: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, feedback_content)
-        ],
-        PHOTO_ATTACHMENT: [
-            MessageHandler(filters.PHOTO, handle_photo),
-            MessageHandler(filters.Regex("^Завершить отправку фото$"), done_photos),
-            CommandHandler("done", done_photos),
-            MessageHandler(filters.TEXT & ~filters.COMMAND, photo_attachment),
-        ],
-        VISIT_DETAILS: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, visit_details)
-        ],
-        CONTACT_INFO: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, contact_info)
-        ],
-    },
-    fallbacks=[CommandHandler("cancel", cancel)],
-)
-
-bot_app.add_handler(conv_handler)
-
-
 # Запуск Flask-приложения
 if __name__ == "__main__":
+    # Инициализация бота
+    bot_app = Application.builder().token(BOT_TOKEN).build()
+
+    # Добавляем обработчики в бота
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            FEEDBACK_CONTENT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, feedback_content)
+            ],
+            PHOTO_ATTACHMENT: [
+                MessageHandler(filters.PHOTO, handle_photo),
+                MessageHandler(filters.Regex("^Завершить отправку фото$"), done_photos),
+                CommandHandler("done", done_photos),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, photo_attachment),
+            ],
+            VISIT_DETAILS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, visit_details)
+            ],
+            CONTACT_INFO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, contact_info)
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+    bot_app.add_handler(conv_handler)
+
+    # Настройка вебхука
+    webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
+    bot_app.bot.set_webhook(url=webhook_url)
+
+    # Запускаем Flask
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
