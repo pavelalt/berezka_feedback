@@ -309,7 +309,10 @@ if __name__ == "__main__":
         loop = asyncio.get_event_loop()
         logger.info(f"Event loop status: {'Running' if loop.is_running() else 'Closed'}")
 
-    asyncio.run(setup_webhook())
+    # Запускаем настройку вебхука
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(setup_webhook())
 
     # Явно указываем порт для Flask
     port = int(os.environ.get("PORT", 5000))
@@ -320,6 +323,4 @@ if __name__ == "__main__":
     config.bind = [f"0.0.0.0:{port}"]
 
     # Запускаем Flask через Hypercorn
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     loop.run_until_complete(serve(app, config))
