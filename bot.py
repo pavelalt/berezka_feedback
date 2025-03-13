@@ -322,5 +322,5 @@ if __name__ == "__main__":
     config = Config()
     config.bind = [f"0.0.0.0:{port}"]
 
-    # Запускаем Flask через Hypercorn
+    # Запускаем Flask через Hypercorn в том же цикле событий
     loop.run_until_complete(serve(app, config))
