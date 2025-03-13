@@ -247,4 +247,30 @@ if __name__ == "__main__":
                 MessageHandler(filters.PHOTO, handle_photo),
                 MessageHandler(filters.Regex("^Завершить отправку фото$"), done_photos),
                 CommandHandler("done", done_photos),
-                MessageHandler(filters.TEXT
+                MessageHandler(filters.TEXT & ~filters.COMMAND, photo_attachment),
+            ],
+            VISIT_DETAILS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, visit_details)
+            ],
+            CONTACT_INFO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, contact_info)
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+    bot_app.add_handler(conv_handler)
+
+    # Асинхронная настройка вебхука
+    async def setup_webhook():
+        webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
+        await bot_app.initialize()  # Инициализируем Application
+        await bot_app.bot.set_webhook(url=webhook_url)
+        logger.info("Webhook successfully set.")
+
+    # Запускаем настройку вебхука
+    asyncio.run(setup_webhook())
+
+    # Явно указываем порт для Flask
+    port = int(os.environ.get("PORT", 5000))
+    logger.info(f"Starting Flask on port {port}")
+    app.run(host="0.0.0.0", port=port)
