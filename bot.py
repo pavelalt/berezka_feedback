@@ -219,9 +219,9 @@ async def cancel(update: Update, context):
 
 # Настройка вебхука
 @app.route("/" + BOT_TOKEN, methods=["POST"])
-def webhook():
+async def webhook():
     update = Update.de_json(request.get_json(force=True), bot_app.bot)
-    bot_app.process_update(update)  # Используем process_update напрямую
+    await bot_app.process_update(update)  # Используем await для process_update
     return "!", 200
 
 
@@ -265,9 +265,3 @@ if __name__ == "__main__":
         webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
         await bot_app.bot.set_webhook(url=webhook_url)
         logger.info("Webhook successfully set.")
-
-    # Запускаем настройку вебхука
-    asyncio.run(setup_webhook())
-
-    # Запускаем Flask
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
