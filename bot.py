@@ -273,4 +273,11 @@ if __name__ == "__main__":
     # Явно указываем порт для Flask
     port = int(os.environ.get("PORT", 5000))
     logger.info(f"Starting Flask on port {port}")
-    app.run(host="0.0.0.0", port=port)
+
+    # Используем асинхронный сервер для Flask
+    from hypercorn.config import Config
+    from hypercorn.asyncio import serve
+
+    config = Config()
+    config.bind = [f"0.0.0.0:{port}"]
+    asyncio.run(serve(app, config))
