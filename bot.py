@@ -46,6 +46,8 @@ if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
 async def start(update: Update, context):
     try:
         logger.info("Processing /start command...")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in /start: {'Running' if loop.is_running() else 'Closed'}")
         await update.message.reply_text(
             "Пожалуйста, напишите ваш отзыв ниже. \n"
             "Все обращения рассматриваются непосредственно руководством."
@@ -255,6 +257,7 @@ async def webhook():
     try:
         logger.info("Received update from Telegram")
         update = Update.de_json(request.get_json(force=True), bot_app.bot)
+        logger.info(f"Update received: {update.to_dict()}")
         await bot_app.process_update(update)
         return "!", 200
     except Exception as e:
