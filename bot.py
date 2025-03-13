@@ -47,7 +47,7 @@ if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
 # Создаем Flask-приложение
 app = Flask(__name__)
 
-# Обработчики команд
+# Обработчик /start
 async def start(update: Update, context):
     try:
         await update.message.reply_text(
@@ -244,7 +244,7 @@ def send_email(message, attachment_paths=None):
         logger.error(f"Ошибка при отправке email: {e}")
         raise
 
-# Обработчик ошибок
+# Обработчик ошибок для Telegram
 async def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
     if update and update.message:
@@ -318,4 +318,8 @@ if __name__ == "__main__":
     # Используем асинхронный сервер для Flask
     config = Config()
     config.bind = [f"0.0.0.0:{port}"]
-    asyncio.run(serve(app, config))
+
+    # Запускаем Flask через Hypercorn
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(serve(app, config))
