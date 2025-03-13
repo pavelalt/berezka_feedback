@@ -261,4 +261,13 @@ if __name__ == "__main__":
     bot_app.add_handler(conv_handler)
 
     # Асинхронная настройка вебхука
-    async def
+    async def setup_webhook():
+        webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
+        await bot_app.bot.set_webhook(url=webhook_url)
+        logger.info("Webhook successfully set.")
+
+    # Запускаем настройку вебхука
+    asyncio.run(setup_webhook())
+
+    # Запускаем Flask
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
