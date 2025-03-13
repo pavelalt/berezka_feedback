@@ -47,7 +47,7 @@ if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
 # Создаем Flask-приложение
 app = Flask(__name__)
 
-# Обработчик /start
+# Обработчики команд
 async def start(update: Update, context):
     try:
         await update.message.reply_text(
@@ -58,6 +58,18 @@ async def start(update: Update, context):
     except Exception as e:
         logger.error(f"Error in start handler: {e}")
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
+
+# Обработчик команды /cancel
+async def cancel(update: Update, context: CallbackContext):
+    try:
+        await update.message.reply_text(
+            "Действие отменено. Для повторного старта нажмите /start."
+        )
+        return ConversationHandler.END
+    except Exception as e:
+        logger.error(f"Error in cancel handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Пожалуйста, попробуйте позже.")
         return ConversationHandler.END
 
 # Обработка содержимого отзыва
@@ -279,7 +291,7 @@ if __name__ == "__main__":
                 MessageHandler(filters.TEXT & ~filters.COMMAND, contact_info)
             ],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel)],  # Добавляем обработчик команды /cancel
     )
     bot_app.add_handler(conv_handler)
 
