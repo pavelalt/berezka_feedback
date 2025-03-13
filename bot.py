@@ -45,6 +45,7 @@ if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
 # Обработчик /start
 async def start(update: Update, context):
     try:
+        logger.info("Processing /start command...")
         await update.message.reply_text(
             "Пожалуйста, напишите ваш отзыв ниже. \n"
             "Все обращения рассматриваются непосредственно руководством."
@@ -59,6 +60,7 @@ async def start(update: Update, context):
 # Обработка содержимого отзыва
 async def feedback_content(update: Update, context):
     try:
+        logger.info("Processing feedback content...")
         context.user_data["feedback_content"] = update.message.text
         reply_keyboard = [["Да", "Нет"]]
         await update.message.reply_text(
@@ -75,6 +77,7 @@ async def feedback_content(update: Update, context):
 # Обработка прикрепления фото
 async def photo_attachment(update: Update, context):
     try:
+        logger.info("Processing photo attachment decision...")
         if update.message.text.lower() == "да":
             context.user_data["photos"] = []  # Инициализируем список для хранения путей к фото
             reply_keyboard = [["Завершить отправку фото"]]
@@ -100,6 +103,7 @@ async def photo_attachment(update: Update, context):
 # Обработка фото
 async def handle_photo(update: Update, context):
     try:
+        logger.info("Processing uploaded photo...")
         photo_file = await update.message.photo[-1].get_file()
         photo_path = f"photos/{photo_file.file_id}.jpg"
         os.makedirs("photos", exist_ok=True)  # Создаем папку для фото
@@ -126,6 +130,7 @@ async def handle_photo(update: Update, context):
 # Завершение прикрепления фото
 async def done_photos(update: Update, context):
     try:
+        logger.info("Completing photo attachment...")
         await update.message.reply_text(
             "Фото успешно прикреплены. \n\n"
             "Укажите дату, время посещения и название зала (например, '15 мая 2025, 14:00-17:00, Баня Купеческая'). "
@@ -142,6 +147,7 @@ async def done_photos(update: Update, context):
 # Обработка данных о посещении
 async def visit_details(update: Update, context):
     try:
+        logger.info("Processing visit details...")
         context.user_data["visit_details"] = update.message.text
         await update.message.reply_text(
             "Пожалуйста, оставьте ваше имя и номер телефона для обратной связи (например, 'Иван, +79991234567'). "
@@ -157,6 +163,7 @@ async def visit_details(update: Update, context):
 # Обработка контактных данных и отправка отзыва на email
 async def contact_info(update: Update, context):
     try:
+        logger.info("Processing contact info...")
         context.user_data["contact_info"] = update.message.text
 
         # Формируем сообщение для отправки
@@ -299,6 +306,10 @@ if __name__ == "__main__":
         await bot_app.initialize()  # Инициализируем Application
         await bot_app.bot.set_webhook(url=webhook_url)
         logger.info("Webhook successfully set.")
+
+        # Логирование состояния цикла событий
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status: {'Running' if loop.is_running() else 'Closed'}")
 
     # Запускаем настройку вебхука
     asyncio.run(setup_webhook())
