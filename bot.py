@@ -48,101 +48,131 @@ app = Flask(__name__)
 
 # Обработчик /start
 async def start(update: Update, context):
-    await update.message.reply_text(
-        "Пожалуйста, напишите ваш отзыв ниже. \n"
-        "Все обращения рассматриваются непосредственно руководством."
-    )
-    return FEEDBACK_CONTENT
+    try:
+        await update.message.reply_text(
+            "Пожалуйста, напишите ваш отзыв ниже. \n"
+            "Все обращения рассматриваются непосредственно руководством."
+        )
+        return FEEDBACK_CONTENT
+    except Exception as e:
+        logger.error(f"Error in start handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
 
 
 # Обработка содержимого отзыва
 async def feedback_content(update: Update, context):
-    context.user_data["feedback_content"] = update.message.text
-    reply_keyboard = [["Да", "Нет"]]
-    await update.message.reply_text(
-        "Хотите прикрепить фото к отзыву?",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
-    )
-    return PHOTO_ATTACHMENT
+    try:
+        context.user_data["feedback_content"] = update.message.text
+        reply_keyboard = [["Да", "Нет"]]
+        await update.message.reply_text(
+            "Хотите прикрепить фото к отзыву?",
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+        )
+        return PHOTO_ATTACHMENT
+    except Exception as e:
+        logger.error(f"Error in feedback_content handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
 
 
 # Обработка прикрепления фото
 async def photo_attachment(update: Update, context):
-    if update.message.text.lower() == "да":
-        context.user_data["photos"] = []  # Инициализируем список для хранения путей к фото
+    try:
+        if update.message.text.lower() == "да":
+            context.user_data["photos"] = []  # Инициализируем список для хранения путей к фото
+            reply_keyboard = [["Завершить отправку фото"]]
+            await update.message.reply_text(
+                "Пожалуйста, отправьте фото. Когда закончите, нажмите 'Завершить отправку фото' или отправьте команду /done.",
+                reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+            )
+            return PHOTO_ATTACHMENT
+        elif update.message.text.lower() == "нет":
+            context.user_data["photos"] = []  # Фото отсутствуют
+            await update.message.reply_text(
+                "Укажите дату, время посещения и название зала (например, '15 мая 2025, 14:00-17:00, Баня Купеческая'). "
+                "\nЕсли не хотите указывать, отправьте '-'",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return VISIT_DETAILS
+    except Exception as e:
+        logger.error(f"Error in photo_attachment handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
+
+
+# Обработка фото
+async def handle_photo(update: Update, context):
+    try:
+        photo_file = await update.message.photo[-1].get_file()
+        photo_path = f"photos/{photo_file.file_id}.jpg"
+        os.makedirs("photos", exist_ok=True)  # Создаем папку для фото
+        await photo_file.download_to_drive(photo_path)
+
+        # Добавляем путь к фото в список
+        if "photos" not in context.user_data:
+            context.user_data["photos"] = []
+        context.user_data["photos"].append(photo_path)
+
         reply_keyboard = [["Завершить отправку фото"]]
         await update.message.reply_text(
-            "Пожалуйста, отправьте фото. Когда закончите, нажмите 'Завершить отправку фото' или отправьте команду /done.",
+            f"Фото успешно прикреплено ({len(context.user_data['photos'])} шт.). "
+            "Отправьте еще фото или нажмите 'Завершить отправку фото'.",
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
         )
         return PHOTO_ATTACHMENT
-    elif update.message.text.lower() == "нет":
-        context.user_data["photos"] = []  # Фото отсутствуют
+    except Exception as e:
+        logger.error(f"Error in handle_photo handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
+
+
+# Завершение прикрепления фото
+async def done_photos(update: Update, context):
+    try:
         await update.message.reply_text(
+            "Фото успешно прикреплены. \n\n"
             "Укажите дату, время посещения и название зала (например, '15 мая 2025, 14:00-17:00, Баня Купеческая'). "
             "\nЕсли не хотите указывать, отправьте '-'",
             reply_markup=ReplyKeyboardRemove(),
         )
         return VISIT_DETAILS
-
-
-# Обработка фото
-async def handle_photo(update: Update, context):
-    photo_file = await update.message.photo[-1].get_file()
-    photo_path = f"photos/{photo_file.file_id}.jpg"
-    os.makedirs("photos", exist_ok=True)  # Создаем папку для фото
-    await photo_file.download_to_drive(photo_path)
-
-    # Добавляем путь к фото в список
-    if "photos" not in context.user_data:
-        context.user_data["photos"] = []
-    context.user_data["photos"].append(photo_path)
-
-    reply_keyboard = [["Завершить отправку фото"]]
-    await update.message.reply_text(
-        f"Фото успешно прикреплено ({len(context.user_data['photos'])} шт.). "
-        "Отправьте еще фото или нажмите 'Завершить отправку фото'.",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
-    )
-    return PHOTO_ATTACHMENT
-
-
-# Завершение прикрепления фото
-async def done_photos(update: Update, context):
-    await update.message.reply_text(
-        "Фото успешно прикреплены. \n\n"
-        "Укажите дату, время посещения и название зала (например, '15 мая 2025, 14:00-17:00, Баня Купеческая'). "
-        "\nЕсли не хотите указывать, отправьте '-'",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-    return VISIT_DETAILS
+    except Exception as e:
+        logger.error(f"Error in done_photos handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
 
 
 # Обработка данных о посещении
 async def visit_details(update: Update, context):
-    context.user_data["visit_details"] = update.message.text
-    await update.message.reply_text(
-        "Пожалуйста, оставьте ваше имя и номер телефона для обратной связи (например, 'Иван, +79991234567'). "
-        "\nЕсли не хотите оставлять, отправьте '-'"
-    )
-    return CONTACT_INFO
+    try:
+        context.user_data["visit_details"] = update.message.text
+        await update.message.reply_text(
+            "Пожалуйста, оставьте ваше имя и номер телефона для обратной связи (например, 'Иван, +79991234567'). "
+            "\nЕсли не хотите оставлять, отправьте '-'"
+        )
+        return CONTACT_INFO
+    except Exception as e:
+        logger.error(f"Error in visit_details handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
 
 
 # Обработка контактных данных и отправка отзыва на email
 async def contact_info(update: Update, context):
-    context.user_data["contact_info"] = update.message.text
-
-    # Формируем сообщение для отправки
-    feedback_content = context.user_data.get("feedback_content", "Не указано")
-    visit_details = context.user_data.get("visit_details", "Не указано")
-    contact_info = context.user_data.get("contact_info", "Не указано")
-    message = (
-        f"Отзыв: {feedback_content}\n"
-        f"Детали посещения: {visit_details}\n"
-        f"Контактные данные: {contact_info}"
-    )
-
     try:
+        context.user_data["contact_info"] = update.message.text
+
+        # Формируем сообщение для отправки
+        feedback_content = context.user_data.get("feedback_content", "Не указано")
+        visit_details = context.user_data.get("visit_details", "Не указано")
+        contact_info = context.user_data.get("contact_info", "Не указано")
+        message = (
+            f"Отзыв: {feedback_content}\n"
+            f"Детали посещения: {visit_details}\n"
+            f"Контактные данные: {contact_info}"
+        )
+
         photos = context.user_data.get("photos", [])
         send_email(message, photos)
 
@@ -211,18 +241,28 @@ def send_email(message, attachment_paths=None):
 
 # Отмена диалога
 async def cancel(update: Update, context):
-    await update.message.reply_text(
-        "Диалог отменён.", reply_markup=ReplyKeyboardRemove()
-    )
-    return ConversationHandler.END
+    try:
+        await update.message.reply_text(
+            "Диалог отменён.", reply_markup=ReplyKeyboardRemove()
+        )
+        return ConversationHandler.END
+    except Exception as e:
+        logger.error(f"Error in cancel handler: {e}")
+        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+        return ConversationHandler.END
 
 
 # Настройка вебхука
 @app.route("/" + BOT_TOKEN, methods=["POST"])
 async def webhook():
-    update = Update.de_json(request.get_json(force=True), bot_app.bot)
-    await bot_app.process_update(update)  # Используем await для process_update
-    return "!", 200
+    try:
+        logger.info("Received update from Telegram")
+        update = Update.de_json(request.get_json(force=True), bot_app.bot)
+        await bot_app.process_update(update)
+        return "!", 200
+    except Exception as e:
+        logger.error(f"Error in webhook: {e}")
+        return "Internal Server Error", 500
 
 
 # Маршрут для проверки работоспособности
