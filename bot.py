@@ -50,6 +50,9 @@ app = Flask(__name__)
 # Обработчик /start
 async def start(update: Update, context):
     try:
+        logger.info("Entering start handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in start handler: {'Running' if loop.is_running() else 'Closed'}")
         await update.message.reply_text(
             "Пожалуйста, напишите ваш отзыв ниже. \n"
             "Все обращения рассматриваются непосредственно руководством."
@@ -63,6 +66,9 @@ async def start(update: Update, context):
 # Обработчик команды /cancel
 async def cancel(update: Update, context: CallbackContext):
     try:
+        logger.info("Entering cancel handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in cancel handler: {'Running' if loop.is_running() else 'Closed'}")
         await update.message.reply_text(
             "Действие отменено. Для повторного старта нажмите /start."
         )
@@ -75,6 +81,9 @@ async def cancel(update: Update, context: CallbackContext):
 # Обработка содержимого отзыва
 async def feedback_content(update: Update, context):
     try:
+        logger.info("Entering feedback_content handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in feedback_content handler: {'Running' if loop.is_running() else 'Closed'}")
         context.user_data["feedback_content"] = update.message.text
         reply_keyboard = [["Да", "Нет"]]
         await update.message.reply_text(
@@ -90,6 +99,9 @@ async def feedback_content(update: Update, context):
 # Обработка прикрепления фото
 async def photo_attachment(update: Update, context):
     try:
+        logger.info("Entering photo_attachment handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in photo_attachment handler: {'Running' if loop.is_running() else 'Closed'}")
         if update.message.text.lower() == "да":
             context.user_data["photos"] = []  # Инициализируем список для хранения путей к фото
             reply_keyboard = [["Завершить отправку фото"]]
@@ -114,6 +126,9 @@ async def photo_attachment(update: Update, context):
 # Обработка фото
 async def handle_photo(update: Update, context):
     try:
+        logger.info("Entering handle_photo handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in handle_photo handler: {'Running' if loop.is_running() else 'Closed'}")
         photo_file = await update.message.photo[-1].get_file()
         photo_path = f"photos/{photo_file.file_id}.jpg"
         os.makedirs("photos", exist_ok=True)  # Создаем папку для фото
@@ -139,6 +154,9 @@ async def handle_photo(update: Update, context):
 # Завершение прикрепления фото
 async def done_photos(update: Update, context):
     try:
+        logger.info("Entering done_photos handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in done_photos handler: {'Running' if loop.is_running() else 'Closed'}")
         await update.message.reply_text(
             "Фото успешно прикреплены. \n\n"
             "Укажите дату, время посещения и название зала (например, '15 мая 2025, 14:00-17:00, Баня Купеческая'). "
@@ -154,6 +172,9 @@ async def done_photos(update: Update, context):
 # Обработка данных о посещении
 async def visit_details(update: Update, context):
     try:
+        logger.info("Entering visit_details handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in visit_details handler: {'Running' if loop.is_running() else 'Closed'}")
         context.user_data["visit_details"] = update.message.text
         await update.message.reply_text(
             "Пожалуйста, оставьте ваше имя и номер телефона для обратной связи (например, 'Иван, +79991234567'). "
@@ -168,6 +189,9 @@ async def visit_details(update: Update, context):
 # Обработка контактных данных и отправка отзыва на email
 async def contact_info(update: Update, context):
     try:
+        logger.info("Entering contact_info handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in contact_info handler: {'Running' if loop.is_running() else 'Closed'}")
         context.user_data["contact_info"] = update.message.text
 
         # Формируем сообщение для отправки
@@ -254,16 +278,20 @@ async def error_handler(update: Update, context: CallbackContext):
 @app.route("/" + BOT_TOKEN, methods=["POST"])
 async def webhook():
     try:
+        logger.info("Entering webhook handler.")
+        loop = asyncio.get_event_loop()
+        logger.info(f"Event loop status in webhook handler: {'Running' if loop.is_running() else 'Closed'}")
         update = Update.de_json(request.get_json(force=True), bot_app.bot)
         await bot_app.process_update(update)
         return "!", 200
     except Exception as e:
-        logger.error(f"Error in webhook: {e}")
+        logger.error(f"Error in webhook handler: {e}")
         return "Internal Server Error", 500
 
 # Маршрут для проверки работоспособности
 @app.route("/", methods=["GET", "HEAD"])
 def health_check():
+    logger.info("Health check requested.")
     return "OK", 200
 
 # Запуск Flask-приложения
