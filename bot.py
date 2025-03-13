@@ -1,5 +1,4 @@
 import os
-from flask import Flask, request
 import logging
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -17,7 +16,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import smtplib
-import asyncio  # Для работы с асинхронными функциями
+import asyncio
 
 # Загружаем переменные окружения из .env (для локального тестирования)
 load_dotenv()
@@ -41,9 +40,6 @@ EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER")
 if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
     logger.error("Missing required environment variables.")
     exit(1)
-
-# Создаем Flask-приложение
-app = Flask(__name__)
 
 
 # Обработчик /start
@@ -239,17 +235,11 @@ def send_email(message, attachment_paths=None):
         raise
 
 
-# Отмена диалога
-async def cancel(update: Update, context):
-    try:
-        await update.message.reply_text(
-            "Диалог отменён.", reply_markup=ReplyKeyboardRemove()
-        )
-        return ConversationHandler.END
-    except Exception as e:
-        logger.error(f"Error in cancel handler: {e}")
-        await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
-        return ConversationHandler.END
+# Обработчик ошибок
+async def error_handler(update: Update, context: CallbackContext):
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+    if update and update.message:
+        await update.message.reply_text("Произошла ошибка. Пожалуйста, попробуйте позже.")
 
 
 # Настройка вебхука
@@ -299,6 +289,9 @@ if __name__ == "__main__":
         fallbacks=[CommandHandler("cancel", cancel)],
     )
     bot_app.add_handler(conv_handler)
+
+    # Добавляем обработчик ошибок
+    bot_app.add_error_handler(error_handler)
 
     # Асинхронная настройка вебхука
     async def setup_webhook():
