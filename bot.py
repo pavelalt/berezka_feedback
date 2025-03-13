@@ -18,7 +18,7 @@ from email import encoders
 import smtplib
 import asyncio
 
-# Загружаем переменные окружения из .env (для локального тестирования)
+# Загружаем переменные окружения из .env
 load_dotenv()
 
 # Логирование
