@@ -16,6 +16,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import smtplib
+from flask import Flask, request
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
 import asyncio
 
 # Загружаем переменные окружения из .env
@@ -41,13 +44,12 @@ if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
     logger.error("Missing required environment variables.")
     exit(1)
 
+# Создаем Flask-приложение
+app = Flask(__name__)
 
 # Обработчик /start
 async def start(update: Update, context):
     try:
-        logger.info("Processing /start command...")
-        loop = asyncio.get_event_loop()
-        logger.info(f"Event loop status in /start: {'Running' if loop.is_running() else 'Closed'}")
         await update.message.reply_text(
             "Пожалуйста, напишите ваш отзыв ниже. \n"
             "Все обращения рассматриваются непосредственно руководством."
@@ -58,11 +60,9 @@ async def start(update: Update, context):
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
         return ConversationHandler.END
 
-
 # Обработка содержимого отзыва
 async def feedback_content(update: Update, context):
     try:
-        logger.info("Processing feedback content...")
         context.user_data["feedback_content"] = update.message.text
         reply_keyboard = [["Да", "Нет"]]
         await update.message.reply_text(
@@ -75,11 +75,9 @@ async def feedback_content(update: Update, context):
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
         return ConversationHandler.END
 
-
 # Обработка прикрепления фото
 async def photo_attachment(update: Update, context):
     try:
-        logger.info("Processing photo attachment decision...")
         if update.message.text.lower() == "да":
             context.user_data["photos"] = []  # Инициализируем список для хранения путей к фото
             reply_keyboard = [["Завершить отправку фото"]]
@@ -101,11 +99,9 @@ async def photo_attachment(update: Update, context):
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
         return ConversationHandler.END
 
-
 # Обработка фото
 async def handle_photo(update: Update, context):
     try:
-        logger.info("Processing uploaded photo...")
         photo_file = await update.message.photo[-1].get_file()
         photo_path = f"photos/{photo_file.file_id}.jpg"
         os.makedirs("photos", exist_ok=True)  # Создаем папку для фото
@@ -128,11 +124,9 @@ async def handle_photo(update: Update, context):
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
         return ConversationHandler.END
 
-
 # Завершение прикрепления фото
 async def done_photos(update: Update, context):
     try:
-        logger.info("Completing photo attachment...")
         await update.message.reply_text(
             "Фото успешно прикреплены. \n\n"
             "Укажите дату, время посещения и название зала (например, '15 мая 2025, 14:00-17:00, Баня Купеческая'). "
@@ -145,11 +139,9 @@ async def done_photos(update: Update, context):
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
         return ConversationHandler.END
 
-
 # Обработка данных о посещении
 async def visit_details(update: Update, context):
     try:
-        logger.info("Processing visit details...")
         context.user_data["visit_details"] = update.message.text
         await update.message.reply_text(
             "Пожалуйста, оставьте ваше имя и номер телефона для обратной связи (например, 'Иван, +79991234567'). "
@@ -161,11 +153,9 @@ async def visit_details(update: Update, context):
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
         return ConversationHandler.END
 
-
 # Обработка контактных данных и отправка отзыва на email
 async def contact_info(update: Update, context):
     try:
-        logger.info("Processing contact info...")
         context.user_data["contact_info"] = update.message.text
 
         # Формируем сообщение для отправки
@@ -197,7 +187,6 @@ async def contact_info(update: Update, context):
             "Произошла ошибка при отправке отзыва. \nПожалуйста, попробуйте позже."
         )
     return ConversationHandler.END
-
 
 # Отправка email
 def send_email(message, attachment_paths=None):
@@ -243,33 +232,27 @@ def send_email(message, attachment_paths=None):
         logger.error(f"Ошибка при отправке email: {e}")
         raise
 
-
 # Обработчик ошибок
 async def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
     if update and update.message:
         await update.message.reply_text("Произошла ошибка. Пожалуйста, попробуйте позже.")
 
-
 # Настройка вебхука
 @app.route("/" + BOT_TOKEN, methods=["POST"])
 async def webhook():
     try:
-        logger.info("Received update from Telegram")
         update = Update.de_json(request.get_json(force=True), bot_app.bot)
-        logger.info(f"Update received: {update.to_dict()}")
         await bot_app.process_update(update)
         return "!", 200
     except Exception as e:
         logger.error(f"Error in webhook: {e}")
         return "Internal Server Error", 500
 
-
 # Маршрут для проверки работоспособности
 @app.route("/", methods=["GET", "HEAD"])
 def health_check():
     return "OK", 200
-
 
 # Запуск Flask-приложения
 if __name__ == "__main__":
@@ -314,7 +297,6 @@ if __name__ == "__main__":
         loop = asyncio.get_event_loop()
         logger.info(f"Event loop status: {'Running' if loop.is_running() else 'Closed'}")
 
-    # Запускаем настройку вебхука
     asyncio.run(setup_webhook())
 
     # Явно указываем порт для Flask
@@ -322,9 +304,6 @@ if __name__ == "__main__":
     logger.info(f"Starting Flask on port {port}")
 
     # Используем асинхронный сервер для Flask
-    from hypercorn.config import Config
-    from hypercorn.asyncio import serve
-
     config = Config()
     config.bind = [f"0.0.0.0:{port}"]
     asyncio.run(serve(app, config))
