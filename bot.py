@@ -256,7 +256,10 @@ def send_email(message, attachment_paths=None):
 async def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
     if update and update.message:
-        await update.message.reply_text("Произошла ошибка. Пожалуйста, попробуйте позже.")
+        try:
+            await update.message.reply_text("Произошла ошибка. Пожалуйста, попробуйте позже.")
+        except Exception as e:
+            logger.error(f"Failed to send error message: {e}")
 
 # Настройка вебхука
 @app.route("/" + BOT_TOKEN, methods=["POST"])
