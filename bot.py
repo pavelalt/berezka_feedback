@@ -330,6 +330,6 @@ if __name__ == "__main__":
 
     # Запускаем Flask через Hypercorn
     try:
-        loop.run_forever()
+        loop.run_until_complete(serve(app, config))
     except KeyboardInterrupt:
         pass
