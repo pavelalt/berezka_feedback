@@ -47,6 +47,18 @@ if not all([BOT_TOKEN, EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
 # Создаем Flask-приложение
 app = Flask(__name__)
 
+# Явное управление циклом событий
+def ensure_event_loop():
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
+
 # Обработчик /start
 async def start(update: Update, context):
     try:
@@ -268,11 +280,8 @@ async def webhook():
         logger.info("Entering webhook handler.")
         update = Update.de_json(request.get_json(force=True), bot_app.bot)
 
-        # Проверяем состояние цикла событий
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        # Убедимся, что цикл событий активен
+        loop = ensure_event_loop()
 
         await bot_app.process_update(update)
         return "!", 200
@@ -314,31 +323,23 @@ if __name__ == "__main__":
         fallbacks=[CommandHandler("cancel", cancel)],  # Добавляем обработчик команды /cancel
     )
     bot_app.add_handler(conv_handler)
-
-    # Добавляем обработчик ошибок
     bot_app.add_error_handler(error_handler)
 
-    # Асинхронная настройка вебхука
+    # Настройка вебхука
     async def setup_webhook():
         webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
-        await bot_app.initialize()  # Инициализируем Application
+        await bot_app.initialize()
         await bot_app.bot.set_webhook(url=webhook_url)
         logger.info("Webhook successfully set.")
 
-    # Запускаем настройку вебхука
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # Запуск Flask через Hypercorn
+    loop = ensure_event_loop()
     loop.run_until_complete(setup_webhook())
 
-    # Явно указываем порт для Flask
     port = int(os.environ.get("PORT", 10000))
-    logger.info(f"Starting Flask on port {port}")
-
-    # Используем асинхронный сервер для Flask
     config = Config()
     config.bind = [f"0.0.0.0:{port}"]
 
-    # Запускаем Flask через Hypercorn
     try:
         loop.run_until_complete(serve(app, config))
     except KeyboardInterrupt:
