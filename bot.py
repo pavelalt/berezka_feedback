@@ -267,6 +267,13 @@ async def webhook():
     try:
         logger.info("Entering webhook handler.")
         update = Update.de_json(request.get_json(force=True), bot_app.bot)
+
+        # Проверяем состояние цикла событий
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
         await bot_app.process_update(update)
         return "!", 200
     except Exception as e:
