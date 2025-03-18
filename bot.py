@@ -17,9 +17,8 @@ from email.mime.base import MIMEBase
 from email import encoders
 import smtplib
 from flask import Flask, request
-from hypercorn.config import Config
-from hypercorn.asyncio import serve
 import asyncio
+import uvicorn
 
 # Загружаем переменные окружения из .env
 load_dotenv()
@@ -63,10 +62,6 @@ def ensure_event_loop():
 async def start(update: Update, context):
     try:
         logger.info("Entering start handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         await update.message.reply_text(
             "Пожалуйста, напишите ваш отзыв ниже. \n"
             "Все обращения рассматриваются непосредственно руководством."
@@ -81,10 +76,6 @@ async def start(update: Update, context):
 async def cancel(update: Update, context: CallbackContext):
     try:
         logger.info("Entering cancel handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         await update.message.reply_text(
             "Действие отменено. Для повторного старта нажмите /start."
         )
@@ -98,10 +89,6 @@ async def cancel(update: Update, context: CallbackContext):
 async def feedback_content(update: Update, context):
     try:
         logger.info("Entering feedback_content handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         context.user_data["feedback_content"] = update.message.text
         reply_keyboard = [["Да", "Нет"]]
         await update.message.reply_text(
@@ -118,10 +105,6 @@ async def feedback_content(update: Update, context):
 async def photo_attachment(update: Update, context):
     try:
         logger.info("Entering photo_attachment handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         if update.message.text.lower() == "да":
             context.user_data["photos"] = []  # Инициализируем список для хранения путей к фото
             reply_keyboard = [["Завершить отправку фото"]]
@@ -147,10 +130,6 @@ async def photo_attachment(update: Update, context):
 async def handle_photo(update: Update, context):
     try:
         logger.info("Entering handle_photo handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         photo_file = await update.message.photo[-1].get_file()
         photo_path = f"photos/{photo_file.file_id}.jpg"
         os.makedirs("photos", exist_ok=True)  # Создаем папку для фото
@@ -177,10 +156,6 @@ async def handle_photo(update: Update, context):
 async def done_photos(update: Update, context):
     try:
         logger.info("Entering done_photos handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         await update.message.reply_text(
             "Фото успешно прикреплены. \n\n"
             "Укажите дату, время посещения и название зала (например, '15 мая 2025, 14:00-17:00, Баня Купеческая'). "
@@ -197,10 +172,6 @@ async def done_photos(update: Update, context):
 async def visit_details(update: Update, context):
     try:
         logger.info("Entering visit_details handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         context.user_data["visit_details"] = update.message.text
         await update.message.reply_text(
             "Пожалуйста, оставьте ваше имя и номер телефона для обратной связи (например, 'Иван, +79991234567'). "
@@ -216,10 +187,6 @@ async def visit_details(update: Update, context):
 async def contact_info(update: Update, context):
     try:
         logger.info("Entering contact_info handler.")
-
-        # Убедимся, что цикл событий активен
-        loop = ensure_event_loop()
-
         context.user_data["contact_info"] = update.message.text
 
         # Формируем сообщение для отправки
@@ -310,11 +277,11 @@ async def error_handler(update: Update, context: CallbackContext):
 async def webhook():
     try:
         logger.info("Entering webhook handler.")
+        update = Update.de_json(request.get_json(force=True), bot_app.bot)
 
         # Убедимся, что цикл событий активен
         loop = ensure_event_loop()
 
-        update = Update.de_json(request.get_json(force=True), bot_app.bot)
         await bot_app.process_update(update)
         return "!", 200
     except Exception as e:
@@ -327,7 +294,7 @@ def health_check():
     logger.info("Health check requested.")
     return "OK", 200
 
-# Запуск Flask-приложения
+# Запуск Flask-приложения через Uvicorn
 if __name__ == "__main__":
     # Инициализация бота
     bot_app = Application.builder().token(BOT_TOKEN).build()
@@ -364,15 +331,9 @@ if __name__ == "__main__":
         await bot_app.bot.set_webhook(url=webhook_url)
         logger.info("Webhook successfully set.")
 
-    # Запуск Flask через Hypercorn
-    loop = ensure_event_loop()
-    loop.run_until_complete(setup_webhook())
-
+    # Запуск Flask через Uvicorn
     port = int(os.environ.get("PORT", 10000))
-    config = Config()
-    config.bind = [f"0.0.0.0:{port}"]
-
     try:
-        loop.run_until_complete(serve(app, config))
+        uvicorn.run(app, host="0.0.0.0", port=port)
     except KeyboardInterrupt:
         pass
