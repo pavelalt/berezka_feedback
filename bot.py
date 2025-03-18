@@ -333,7 +333,9 @@ if __name__ == "__main__":
     # Настройка вебхука
     async def setup_webhook():
         webhook_url = f"https://berezka-feedback-bot.onrender.com/{BOT_TOKEN}"
+        # Инициализация приложения бота
         await bot_app.initialize()
+        # Установка вебхука
         await bot_app.bot.set_webhook(url=webhook_url)
         logger.info("Webhook successfully set.")
 
@@ -343,6 +345,8 @@ if __name__ == "__main__":
     # Запуск Flask через Uvicorn
     port = int(os.environ.get("PORT", 10000))
     try:
+        loop = ensure_event_loop()
+        loop.run_until_complete(setup_webhook())
         uvicorn.run(asgi_app, host="0.0.0.0", port=port)
     except KeyboardInterrupt:
         pass
